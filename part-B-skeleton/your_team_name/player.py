@@ -219,13 +219,13 @@ class ExamplePlayer:
         # if the action is an exit, remove piece from board
         if new_coord is None:
             ## for part b
-            ## return (action, tuple(old_coord))
-            print("{} from {}.".format(action, tuple(old_coord)))
+            return (action, tuple(old_coord))
+            ##("{} from {}.".format(action, tuple(old_coord)))
         # if the action is a move or jump, move piece to its next location
         else:
             ## for part b
-            ## return (action,(tuple(old_coord), tuple(new_coord)))
-            print("{} from {} to {}.".format(action, tuple(old_coord), tuple(new_coord)))
+            return (action,(tuple(old_coord), tuple(new_coord)))
+            #print("{} from {} to {}.".format(action, tuple(old_coord), tuple(new_coord)))
 
     # generates a list of states showing the next possible actions
     def generate_next_states(self, state):
