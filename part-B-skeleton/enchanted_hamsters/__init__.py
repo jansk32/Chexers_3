@@ -1,0 +1,1 @@
+from enchanted_hamsters.player import ExamplePlayer as Player

@@ -50,10 +50,12 @@ class ExamplePlayer:
         """
         # TODO: Set up state representation.
         self.colour = colour
+        ## to decide what the initial pieces are
         self.pieces = []
+        pieces = self.startinPieces(self.colour)
         for i in pieces:
             self.pieces.append(tuple(i))
-        self.board = createBoard()
+        self.board = self.createBoard()
         # assign exits according to colour
         if colour == "red":
             PLAYER_TYPE = 'red'
@@ -78,7 +80,7 @@ class ExamplePlayer:
         must be represented based on the above instructions for representing 
         actions.
         """
-        searched = self.a_star()
+        searched = self.a_star(self.board)
         if (searched):
             return searched
         else :
@@ -106,7 +108,6 @@ class ExamplePlayer:
         """
         # TODO: Update state representation in response to action.
         
-        ## take note of color not yet
         coord = action[1][0]
         new_coord = action[1][1]
         self.update_board(self.board, coord, new_coord)
@@ -356,7 +357,7 @@ class ExamplePlayer:
                 g_cost[tuple(next_state)] = temp_g_cost
                 total_cost[tuple(next_state)] = g_cost[tuple(next_state)] + self.heuristic(next_state)
     
-    def createBoard():
+    def createBoard(self):
         ## creates initial board
         board = {}
         for blue in BLUE_STARTS:
@@ -385,3 +386,16 @@ class ExamplePlayer:
             self.exits = GREEN_CORNERS
         else:
             self.exits = BLUE_CORNERS
+
+    def startinPieces(self, colour):
+        if colour == "red":
+            pieces = RED_STARTS
+        elif colour == "green":
+            pieces = GREEN_STARTS
+        else:
+            pieces = BLUE_STARTS
+        return pieces
+
+    def evaluation(self, board):
+        eval = []
+        return eval
