@@ -1,5 +1,4 @@
-from collections import defaultdict
-import math
+import random
 
 # coordinate indexes
 X = 0
@@ -12,8 +11,6 @@ DIRECTION_SW = 2
 DIRECTION_W = 3
 DIRECTION_NW = 4
 DIRECTION_NE = 5
-
-PLAYER_TYPE = ''
 
 BOARD_EDGE = 3
 MAX_DISTANCE = 7
@@ -50,19 +47,17 @@ class ExamplePlayer:
         """
         # TODO: Set up state representation.
         self.colour = colour
+        self.board = self.createBoard()
         self.pieces = []
-        for i in pieces:
-            self.pieces.append(tuple(i))
-        self.board = createBoard()
         # assign exits according to colour
         if colour == "red":
-            PLAYER_TYPE = 'red'
+            self.pieces = RED_STARTS
             self.exits = RED_EXITS
         elif colour == "green":
-            PLAYER_TYPE = 'green'
+            self.pieces = GREEN_STARTS
             self.exits = GREEN_EXITS
         else:
-            PLAYER_TYPE = 'blue'
+            self.pieces = BLUE_STARTS
             self.exits = BLUE_EXITS
 
 
@@ -78,12 +73,19 @@ class ExamplePlayer:
         must be represented based on the above instructions for representing
         actions.
         """
-        searched = self.a_star()
-        if (searched):
-            return searched
-        else :
         # TODO: Decide what action to take.
+        movedict = {}
+        for piece in self.pieces:
+            if piece in self.exits:
+                return self.print_move(piece, None)
+            elif any(self.can_move(piece)):
+                movedict[piece] = filter(None, self.can_move(piece))
+        if not movedict:
             return ("PASS", None)
+        else:
+            randpiece = random.choice(list(movedict.keys()))
+            randmove = random.choice(movedict[randpiece])
+            return self.print_move(randpiece, randmove)
 
 
     def update(self, colour, action):
@@ -110,22 +112,6 @@ class ExamplePlayer:
         coord = action[1][0]
         new_coord = action[1][1]
         self.update_board(self.board, coord, new_coord)
-
-    # uses a heuristic function to return a value for the given state
-    def heuristic(self, state):
-        state_val = 0
-        # iterate through all pieces on the board
-        for piece in state:
-            min_piece_distance = MAX_DISTANCE
-            # ignore blocks
-            if piece[1] == PLAYER_TYPE:
-                # calculate the distance from the piece to each of the exits
-                for exit_location in self.exits:
-                    if self.distance(piece[0], exit_location) < min_piece_distance:
-                        min_piece_distance = self.distance(piece[0], exit_location)
-                # add the distance to the closest exit to the overall state value
-                state_val += min_piece_distance + 1
-        return state_val
 
     # returns the mathematical z coordinate of a space given its x and y coordinate
     def z_coordinate(self, coord):
@@ -187,6 +173,8 @@ class ExamplePlayer:
             move_list[DIRECTION_NW] = (x, y - 2)
         return move_list
 
+
+
     # indicates whether an action is an exit, move or a jump
     def action_type(self, old_coord, new_coord):
         if new_coord is None:
@@ -206,11 +194,13 @@ class ExamplePlayer:
     # updates the input board
     def update_board(self, board, coord, new_coord):
         # remove the old coordinate's player
-        color = board[coord]
+        colour = board[coord]
         del board[coord]
         # place the player on the new coordinate
         if new_coord != EXIT_LOC:
-            board[new_coord] = color
+            board[new_coord] = colour
+        if colour == self.colour:
+            self.pieces[self.pieces.index(coord)] = new_coord
         return board
 
     #  prints output describing the move
@@ -227,40 +217,6 @@ class ExamplePlayer:
             return (action,(tuple(old_coord), tuple(new_coord)))
             #print("{} from {} to {}.".format(action, tuple(old_coord), tuple(new_coord)))
 
-    # generates a list of states showing the next possible actions
-    def generate_next_states(self, state):
-        next_state = []
-        for piece in state:
-            if state[piece] == PLAYER_TYPE:
-                # if the piece can move or jump, generate a new state for its possible actions
-                for move in self.can_move(piece):
-                    if move:
-                        tmp_board = state.copy()
-                        tmp_board = self.update_board(tmp_board, piece, move)
-                        tmp_board = self.dict_to_tuple(tmp_board)
-                        next_state.append(tmp_board)
-        return next_state
-
-    # generates the goal state based on the initial board
-    def generate_goal(self):
-        goal_board = self.board.copy()
-        # remove all the player pieces from the board copy
-        for piece in self.pieces:
-            del goal_board[piece]
-        goal_board = self.dict_to_tuple(goal_board)
-        return goal_board
-
-    # determines the next node to look at
-    def find_current(self, total_cost, open_set):
-        min_cost = total_cost[open_set[0]]
-        current = None
-        # choose the open node with the lowest cost
-        for state in open_set:
-            if total_cost[state] <= min_cost:
-                current = state
-                min_cost = total_cost[state]
-        return current
-
     # finds the difference between two states
     def state_diff(self, state1, state2):
         diff = [None, None]
@@ -276,85 +232,12 @@ class ExamplePlayer:
                         diff[1] = new_piece[0]
         return diff
 
-    # reconstructs the path to the current node. based off webinar code provided by Matt Farrugia (2019)
-    def construct_path(self, came_from, goal):
-        path = []
-        state = goal
-        # trace steps backwards from goal
-        while came_from[state] is not None:
-            path.append(state)
-            state = came_from[state]
-        path.append(state)
-        path.reverse()
-        # print the moves made
-        for state in path[:-1]:
-            action = self.state_diff(state, path[path.index(state) + 1])
-            self.print_move(action[0], action[1])
 
     # removes a certain piece from the board
     def make_exit(self, coord, state):
         del state[coord]
         return state
 
-    # runs the a* algorithm to find the best moves to the goal state. derived from pseudocode
-    # available on wikipedia.org
-    def a_star(self, start):
-        # initialise state sets that a* keeps track of
-        start = self.dict_to_tuple(start)
-        goal = self.generate_goal()
-        closed_set = []
-        open_set = [start]
-        came_from = {start: None}
-        # known distance from initial state
-        g_cost = defaultdict(lambda: math.inf)
-        g_cost[start] = 0
-        # g_cost added to heuristic
-        total_cost = defaultdict(lambda: math.inf)
-        total_cost[start] = self.heuristic(start)
-
-        # while there are open nodes to consider
-        while open_set:
-            current = self.find_current(total_cost, open_set)
-            current_dict = dict(current)
-
-            # search whether a player is on an exit, if so, EXIT
-            for i in list(current):
-                if i[0] in self.exits and i[1] == PLAYER_TYPE:
-                    old_state = current
-                    open_set.remove(current)
-                    # make exit
-                    current_dict = self.make_exit(i[0], current_dict)
-                    current = tuple(current_dict.items())
-                    # adjust trackers
-                    came_from[current] = old_state
-                    g_cost[current] = 0
-                    total_cost[current] = self.heuristic(current)
-                    open_set.append(current)
-
-            self.board = current_dict
-
-            # if goal has been reached, return reconstructed path
-            if current == goal:
-                return self.construct_path(came_from, goal)
-
-            open_set.remove(current)
-            closed_set.append(current)
-
-            # evaluate possible states to succeed current state
-            for next_state in self.generate_next_states(current_dict):
-                if next_state in closed_set:
-                    continue
-
-                temp_g_cost = g_cost[current] + 1
-                if next_state not in open_set:
-                    open_set.append(next_state)
-                elif temp_g_cost >= g_cost[next_state]:
-                    continue
-
-                # if this state is the best successor so far
-                came_from[tuple(next_state)] = current
-                g_cost[tuple(next_state)] = temp_g_cost
-                total_cost[tuple(next_state)] = g_cost[tuple(next_state)] + self.heuristic(next_state)
 
     def createBoard():
         ## creates initial board
@@ -366,22 +249,3 @@ class ExamplePlayer:
         for red in RED_STARTS:
             board[red] = 'red'
         return board
-
-    ## determining if a player can be captured in the next step
-    def canBeCaptured(self, coord, next_state):
-        new = self.generate_next_states(next_state)
-        print(new)
-        for space in new:
-            if space in self.board and self.board[space] != self.colour:
-                return True
-        return False
-
-    ## aim for corners
-    def aimCorners(self, board, colour):
-        ## only implemented when flag indicates to use this
-        if colour == "red":
-            self.exits = RED_CORNERS
-        elif colour == "green":
-            self.exits = GREEN_CORNERS
-        else:
-            self.exits = BLUE_CORNERS
