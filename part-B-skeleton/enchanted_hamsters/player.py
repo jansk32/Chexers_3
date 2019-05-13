@@ -82,7 +82,6 @@ class ExamplePlayer:
         actions.
         """
         goal = self.generate_goal()
-        print("SELF.PIECES: ",self.colour,self.pieces,"\n\n")
         searched = self.a_star(self.board, goal)
         if (searched):
             return searched
@@ -113,9 +112,14 @@ class ExamplePlayer:
         
         coord = action[1][0]
         new_coord = action[1][1]
+        if action[0] == 'JUMP':
+            print("jump")
+
         self.updated_board = self.update_board(self.updated_board, coord, new_coord)
+        print(self.updated_board)
         self.board = dict(self.updated_board)
         self.pieces = self.updatePieces(self.updated_board)
+        print("SELF.PIECES: ",self.colour, self.pieces,"\n\n")
     
     # uses a heuristic function to return a value for the given state
     def heuristic(self, state):
@@ -409,6 +413,22 @@ class ExamplePlayer:
             if board[piece] == self.colour:
                 pieces.append(piece)
         return pieces
+
+    def isJumped(self, oldcoord, newcoord):
+        #newcoord x,y
+        x1 = newcoord[0]
+        y1 = newcoord[1]
+
+        #oldcoord x,y
+        x2 = oldcoord[0]
+        y2 = oldcoord[1]
+
+        if(abs(x1-x2) == 2 and y1 == y2):
+            return (x1-1, y1)
+        ## hardcode this???any simpler way
+
+
+        return
 
     def evaluation(self, board):
         eval = []
