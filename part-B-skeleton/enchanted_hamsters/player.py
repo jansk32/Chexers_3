@@ -1,5 +1,6 @@
 from collections import defaultdict
 import math
+import numpy as np
 
     # coordinate indexes
 X = 0
@@ -112,11 +113,13 @@ class ExamplePlayer:
         
         coord = action[1][0]
         new_coord = action[1][1]
-        if action[0] == 'JUMP':
-            print("jump")
+        
 
         self.updated_board = self.update_board(self.updated_board, coord, new_coord)
-        print(self.updated_board)
+        if action[0] == 'JUMP':
+            jumpedOver = self.isJumped(coord, new_coord)
+            self.updated_board = self.jump_update(self.updated_board, jumpedOver, colour)
+            print(self.updated_board)
         self.board = dict(self.updated_board)
         self.pieces = self.updatePieces(self.updated_board)
         print("SELF.PIECES: ",self.colour, self.pieces,"\n\n")
@@ -423,12 +426,23 @@ class ExamplePlayer:
         x2 = oldcoord[0]
         y2 = oldcoord[1]
 
-        if(abs(x1-x2) == 2 and y1 == y2):
-            return (x1-1, y1)
+        # diff x,y
+        diffX = x1-x2
+        diffY = y1-y2
+
+        if(abs(diffX) == 2 and diffY == 0):
+            return (x1-(1* np.sign(diffX)), y1)
+        elif(abs(diffX) == 2 and abs(diffY) == 2):
+            return (x1-(1* np.sign(diffX)), y1 - (1* np.sign(diffY)))
+        elif(diffX == 0 and abs(diffY) == 2):
+            return (x1, y1 -(1* np.sign(diffY)))
         ## hardcode this???any simpler way
-
-
-        return
+    
+    # update the board with a jump
+    def jump_update(self, board, coord, colour):
+        del board[coord]
+        board[coord] = colour
+        return board
 
     def evaluation(self, board):
         eval = []
