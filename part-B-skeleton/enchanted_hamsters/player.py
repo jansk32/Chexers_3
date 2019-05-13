@@ -13,7 +13,7 @@ DIRECTION_W = 3
 DIRECTION_NW = 4
 DIRECTION_NE = 5
 
-PLAYER_TYPE = ''
+# PLAYER_TYPE = ''
 
 BOARD_EDGE = 3
 MAX_DISTANCE = 7
@@ -56,15 +56,16 @@ class ExamplePlayer:
         for i in pieces:
             self.pieces.append(tuple(i))
         self.board = self.createBoard()
+        self.updated_board = self.createBoard()
         # assign exits according to colour
         if colour == "red":
-            PLAYER_TYPE = 'red'
+            # PLAYER_TYPE = "red"
             self.exits = RED_EXITS
         elif colour == "green":
-            PLAYER_TYPE = 'green'
+            # PLAYER_TYPE = "green"
             self.exits = GREEN_EXITS
         else:
-            PLAYER_TYPE = 'blue'
+            # PLAYER_TYPE = "blue"
             self.exits = BLUE_EXITS
 
 
@@ -80,7 +81,9 @@ class ExamplePlayer:
         must be represented based on the above instructions for representing 
         actions.
         """
-        searched = self.a_star(self.board)
+        goal = self.generate_goal()
+        print("SELF.PIECES: ",self.colour,self.pieces,"\n\n")
+        searched = self.a_star(self.board, goal)
         if (searched):
             return searched
         else :
@@ -110,7 +113,9 @@ class ExamplePlayer:
         
         coord = action[1][0]
         new_coord = action[1][1]
-        self.update_board(self.board, coord, new_coord)
+        self.updated_board = self.update_board(self.updated_board, coord, new_coord)
+        self.board = dict(self.updated_board)
+        self.pieces = self.updatePieces(self.updated_board)
     
     # uses a heuristic function to return a value for the given state
     def heuristic(self, state):
@@ -119,7 +124,7 @@ class ExamplePlayer:
         for piece in state:
             min_piece_distance = MAX_DISTANCE
             # ignore blocks
-            if piece[1] == PLAYER_TYPE:
+            if piece[1] == self.colour:
                 # calculate the distance from the piece to each of the exits
                 for exit_location in self.exits:
                     if self.distance(piece[0], exit_location) < min_piece_distance:
@@ -232,7 +237,7 @@ class ExamplePlayer:
     def generate_next_states(self, state):
         next_state = []
         for piece in state:
-            if state[piece] == PLAYER_TYPE:
+            if state[piece] == self.colour:
                 # if the piece can move or jump, generate a new state for its possible actions
                 for move in self.can_move(piece):
                     if move:
@@ -288,9 +293,11 @@ class ExamplePlayer:
         path.append(state)
         path.reverse()
         # print the moves made
-        for state in path[:-1]:
-            action = self.state_diff(state, path[path.index(state) + 1])
-            self.print_move(action[0], action[1])
+        action = self.state_diff(path[0], path[path.index(state) + 1])
+        return self.print_move(action[0], action[1])
+        # for state in path[:-1]:
+        #     action = self.state_diff(state, path[path.index(state) + 1])
+        #     self.print_move(action[0], action[1])
 
     # removes a certain piece from the board
     def make_exit(self, coord, state):
@@ -299,10 +306,9 @@ class ExamplePlayer:
 
     # runs the a* algorithm to find the best moves to the goal state. derived from pseudocode
     # available on wikipedia.org
-    def a_star(self, start):
+    def a_star(self, start, goal):
         # initialise state sets that a* keeps track of
         start = self.dict_to_tuple(start)
-        goal = self.generate_goal()
         closed_set = []
         open_set = [start]
         came_from = {start: None}
@@ -312,15 +318,16 @@ class ExamplePlayer:
         # g_cost added to heuristic
         total_cost = defaultdict(lambda: math.inf)
         total_cost[start] = self.heuristic(start)
-
+        
         # while there are open nodes to consider
         while open_set:
             current = self.find_current(total_cost, open_set)
             current_dict = dict(current)
+        
 
             # search whether a player is on an exit, if so, EXIT
             for i in list(current):
-                if i[0] in self.exits and i[1] == PLAYER_TYPE:
+                if i[0] in self.exits and i[1] == self.colour:
                     old_state = current
                     open_set.remove(current)
                     # make exit
@@ -336,11 +343,11 @@ class ExamplePlayer:
 
             # if goal has been reached, return reconstructed path
             if current == goal:
+                print("goal found")
                 return self.construct_path(came_from, goal)
 
             open_set.remove(current)
             closed_set.append(current)
-
             # evaluate possible states to succeed current state
             for next_state in self.generate_next_states(current_dict):
                 if next_state in closed_set:
@@ -371,7 +378,6 @@ class ExamplePlayer:
     ## determining if a player can be captured in the next step
     def canBeCaptured(self, coord, next_state):
         new = self.generate_next_states(next_state)
-        print(new)
         for space in new:
             if space in self.board and self.board[space] != self.colour:
                 return True
@@ -394,6 +400,14 @@ class ExamplePlayer:
             pieces = GREEN_STARTS
         else:
             pieces = BLUE_STARTS
+        return pieces
+
+    ## update pieces
+    def updatePieces(self, board):
+        pieces = []
+        for piece in board.keys():
+            if board[piece] == self.colour:
+                pieces.append(piece)
         return pieces
 
     def evaluation(self, board):
