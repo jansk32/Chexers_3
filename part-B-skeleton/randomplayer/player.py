@@ -79,7 +79,9 @@ class ExamplePlayer:
             if piece in self.exits:
                 return self.print_move(piece, None)
             elif any(self.can_move(piece)):
-                movedict[piece] = filter(None, self.can_move(piece))
+                moves = self.can_move(piece)
+                moves = filter(None, self.can_move(moves))
+                movedict[piece] = moves
         if not movedict:
             return ("PASS", None)
         else:
@@ -239,7 +241,7 @@ class ExamplePlayer:
         return state
 
 
-    def createBoard():
+    def createBoard(self):
         ## creates initial board
         board = {}
         for blue in BLUE_STARTS:

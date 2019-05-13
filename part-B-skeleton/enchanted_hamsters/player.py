@@ -110,16 +110,22 @@ class ExamplePlayer:
         the action/pass against the game rules).
         """
         # TODO: Update state representation in response to action.
-        
-        coord = action[1][0]
-        new_coord = action[1][1]
-        
 
-        self.updated_board = self.update_board(self.updated_board, coord, new_coord)
-        if action[0] == 'JUMP':
-            jumpedOver = self.isJumped(coord, new_coord)
-            self.updated_board = self.jump_update(self.updated_board, jumpedOver, colour)
-            print(self.updated_board)
+        print(action[1][0])
+        print(action[1][1])
+
+        if isinstance(action[1][0], tuple):
+            print("NEW COORD")
+            coord = action[1][0]
+            new_coord = action[1][1]
+            self.updated_board = self.update_board(self.updated_board, coord, new_coord)
+            if action[0] == 'JUMP':
+                jumpedOver = self.isJumped(coord, new_coord)
+                self.updated_board = self.jump_update(self.updated_board, jumpedOver, colour)
+                print(self.updated_board)
+        elif action[0] == 'EXIT':
+            coord = action[1]
+            self.updated_board = self.make_exit(coord, self.updated_board)
         self.board = dict(self.updated_board)
         self.pieces = self.updatePieces(self.updated_board)
         print("SELF.PIECES: ",self.colour, self.pieces,"\n\n")
@@ -430,13 +436,15 @@ class ExamplePlayer:
         diffX = x1-x2
         diffY = y1-y2
 
-        if(abs(diffX) == 2 and diffY == 0):
+        if abs(diffX) == 2 and diffY == 0:
             return (x1-(1* np.sign(diffX)), y1)
-        elif(abs(diffX) == 2 and abs(diffY) == 2):
+        elif abs(diffX) == 2 and abs(diffY) == 2:
             return (x1-(1* np.sign(diffX)), y1 - (1* np.sign(diffY)))
-        elif(diffX == 0 and abs(diffY) == 2):
+        elif diffX == 0 and abs(diffY) == 2:
             return (x1, y1 -(1* np.sign(diffY)))
         ## hardcode this???any simpler way
+
+        ## could identify the direction (E, NE etc.) and select the space in that direction?
     
     # update the board with a jump
     def jump_update(self, board, coord, colour):

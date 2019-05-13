@@ -39,7 +39,7 @@ _COL_NAME  = {
     'g': 'Green',
     'b': 'Blue',
 }
-if sys.stdout.isatty():
+if False:
     # Yay! We can use colour
     _DISPLAY = { # something 5 characters wide for each colour:
         'r': " \033[1m(\033[91mR\033[0m\033[1m)\033[0m ",
