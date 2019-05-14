@@ -82,6 +82,8 @@ class ExamplePlayer:
         must be represented based on the above instructions for representing 
         actions.
         """
+        if (len(self.pieces) == 0):
+            return ("PASS", None)
         goal = self.generate_goal()
         searched = self.a_star(self.board, goal)
         if (searched):
@@ -111,10 +113,9 @@ class ExamplePlayer:
         """
         # TODO: Update state representation in response to action.
 
-        print(action[1][0])
-        print(action[1][1])
-
-        if isinstance(action[1][0], tuple):
+        if action[0] == 'PASS':
+            pass
+        elif isinstance(action[1][0], tuple):
             print("NEW COORD")
             coord = action[1][0]
             new_coord = action[1][1]
