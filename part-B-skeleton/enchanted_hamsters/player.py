@@ -86,8 +86,10 @@ class ExamplePlayer:
         searched = self.a_star(self.board, goal)
         if (searched):
             return searched
-        else :
+        elif len(self.pieces) == 0:
         # TODO: Decide what action to take.
+            return ("PASS", None)
+        else:
             return ("PASS", None)
 
 
