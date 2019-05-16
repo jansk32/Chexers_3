@@ -58,6 +58,7 @@ class ExamplePlayer:
             self.pieces.append(tuple(i))
         self.board = self.createBoard()
         self.updated_board = self.createBoard()
+        self.exited = 0
         # assign exits according to colour
         if colour == "red":
             # PLAYER_TYPE = "red"
@@ -112,7 +113,6 @@ class ExamplePlayer:
         the action/pass against the game rules).
         """
         # TODO: Update state representation in response to action.
-
         if action[0] == 'PASS':
             pass
         elif isinstance(action[1][0], tuple):
@@ -126,19 +126,20 @@ class ExamplePlayer:
                 print(self.updated_board)
         elif action[0] == 'EXIT':
             coord = action[1]
+            self.exited += 1
             self.updated_board = self.make_exit(coord, self.updated_board)
         self.board = dict(self.updated_board)
         self.pieces = self.updatePieces(self.updated_board)
         # print("SELF.PIECES: ",self.colour, self.pieces,"\n\n")
     
     # uses a heuristic function to return a value for the given state
-    def heuristic(self, state):
+    def heuristic(self, state, colour):
         state_val = 0
         # iterate through all pieces on the board
         for piece in state:
             min_piece_distance = MAX_DISTANCE
             # ignore blocks
-            if piece[1] == self.colour:
+            if piece[1] == colour:
                 # calculate the distance from the piece to each of the exits
                 for exit_location in self.exits:
                     if self.distance(piece[0], exit_location) < min_piece_distance:
@@ -248,10 +249,10 @@ class ExamplePlayer:
             #print("{} from {} to {}.".format(action, tuple(old_coord), tuple(new_coord)))
 
     # generates a list of states showing the next possible actions
-    def generate_next_states(self, state):
+    def generate_next_states(self, state, colour):
         next_state = []
         for piece in state:
-            if state[piece] == self.colour:
+            if state[piece] == colour:
                 # if the piece can move or jump, generate a new state for its possible actions
                 for move in self.can_move(piece):
                     if move:
@@ -331,7 +332,7 @@ class ExamplePlayer:
         g_cost[start] = 0
         # g_cost added to heuristic
         total_cost = defaultdict(lambda: math.inf)
-        total_cost[start] = self.heuristic(start)
+        total_cost[start] = self.heuristic(start, self.colour)
         
         # while there are open nodes to consider
         while open_set:
@@ -350,7 +351,7 @@ class ExamplePlayer:
                     # adjust trackers
                     came_from[current] = old_state
                     g_cost[current] = 0
-                    total_cost[current] = self.heuristic(current)
+                    total_cost[current] = self.heuristic(current, self.colour)
                     open_set.append(current)
 
             self.board = current_dict
@@ -363,7 +364,7 @@ class ExamplePlayer:
             open_set.remove(current)
             closed_set.append(current)
             # evaluate possible states to succeed current state
-            for next_state in self.generate_next_states(current_dict):
+            for next_state in self.generate_next_states(current_dict,self.colour):
                 if next_state in closed_set:
                     continue
 
@@ -376,7 +377,7 @@ class ExamplePlayer:
                 # if this state is the best successor so far
                 came_from[tuple(next_state)] = current
                 g_cost[tuple(next_state)] = temp_g_cost
-                total_cost[tuple(next_state)] = g_cost[tuple(next_state)] + self.heuristic(next_state)
+                total_cost[tuple(next_state)] = g_cost[tuple(next_state)] + self.heuristic(next_state, self.colour)
     
     def createBoard(self):
         ## creates initial board
@@ -388,10 +389,11 @@ class ExamplePlayer:
         for red in RED_STARTS:
             board[red] = 'red'
         return board
+    
 
     ## determining if a player can be captured in the next step
-    def canBeCaptured(self, coord, next_state):
-        new = self.generate_next_states(next_state)
+    def canBeCaptured(self, next_state):
+        new = set(self.generate_next_states_all(next_state, self.colour))
         for space in new:
             if space in self.board and self.board[space] != self.colour:
                 return True
@@ -453,8 +455,12 @@ class ExamplePlayer:
         board[coord] = colour
         return board
 
-    def evaluation(self, board):
-        eval = []
+    def evaluation(self, state, colour, pieces):
+        distance = self.heuristic(state, colour)
+        numPieces = len(pieces)
+        exited = self.exited
+
+
         return eval
 
 
@@ -471,20 +477,33 @@ class ExamplePlayer:
         [player2_pieces, player3_pieces] = playerPieces(colours, self.colour, self.state)
         
         
-        
         #iterate through each player
+        j = colourInd
+        lastBranch = []
+        curr_state = state.copy()
         for i in range(3):
-            j = colourInd
-            curr_state = state.copy()
             branch = {}
-            newStates = self.generate_next_states(curr_state)
+            newStates = self.generate_next_states(curr_state, colours[j])
             for state in newStates:
-                ## {newstate : prevstate}
-                branch[state] = curr_state
+                ## get depth 3 (last player)
+                if i == 2:
+                    tmpBranch = {}
+                    tmpBranch[state] = curr_state
+                    print("lol")
+                    ## ( {newstate : prevstate}, value )
+                    
+                else:
+                    ## {newstate : prevstate}
+                    branch[state] = curr_state
             tree.add(branch)
-            if colourInd >= 3:
+            curr_state = state
+
+            ## iterate through the colour list
+            if colourInd >= 2:
                 j = 0
-        
+            else:
+                j+=1
+
             
 
     def playerPieces(colours, myColour, state):
