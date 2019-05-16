@@ -391,13 +391,6 @@ class ExamplePlayer:
         return board
     
 
-    ## determining if a player can be captured in the next step
-    def canBeCaptured(self, next_state):
-        new = set(self.generate_next_states_all(next_state, self.colour))
-        for space in new:
-            if space in self.board and self.board[space] != self.colour:
-                return True
-        return False
 
     ## aim for corners
     def aimCorners(self, board, colour):
@@ -455,11 +448,39 @@ class ExamplePlayer:
         board[coord] = colour
         return board
 
-    def evaluation(self, state, colour, pieces):
-        distance = self.heuristic(state, colour)
-        numPieces = len(pieces)
-        exited = self.exited
+    def generate_surroundings(self, coord, colour):
+        [x, y] = coord
+        move_list = []
+        # show ALL moves
+        move_list.add((x + 1, y))
+        move_list.add((x + 1, y - 1))
+        move_list.add((x, y + 1))
+        move_list.add((x - 1, y))
+        move_list.add((x - 1, y + 1))
+        move_list.add((x, y - 1))
+        return move_list
 
+    ## determining total number of places that means will be captured
+    def canBeCaptured(self, state, colour):
+        evaluationNum = 0
+        new = self.generate_next_states_all(state, colour)
+        ## for each possible move
+        for space in new:
+            ## check surroundings
+            surroundings = self.generate_surroundings(space, colour)
+            for possibleEnemy in surroundings:
+                if space in self.board and self.board[possibleEnemy] != colour:
+                    evaluationNum += 1
+
+        return evaluationNum
+
+    def evaluation(self, state, colour, pieces):
+        distance = self.heuristic(state, colour) ## int 
+        numPieces = len(pieces) # int  => less the better
+        exited = self.exited #int bigger number ==> decrease by a lot
+        isCaptured = self.canBeCaptured(state, colour) #int
+        
+        eval = distance + numPieces - exited + isCaptured
 
         return eval
 
@@ -473,36 +494,39 @@ class ExamplePlayer:
         
         # initsialising player with colours
         colourInd = colours.index(self.color)
-        myPieces = self.pieces.copy()
-        [player2_pieces, player3_pieces] = playerPieces(colours, self.colour, self.state)
+        mypieces = {self.colour: self.pieces.copy()}
+        [player2, player3] = playerPieces(colours, self.colour, self.state)
         
+        colourArr  = [mypieces, player2, player3]
         
         #iterate through each player
-        j = colourInd
+        j = 0
         lastBranch = []
         curr_state = state.copy()
         for i in range(3):
             branch = {}
-            newStates = self.generate_next_states(curr_state, colours[j])
+            curr_colour = list(colourArr[j].keys())[0]
+            curr_pieces = list(colourArr[j].values())[0]
+            newStates = self.generate_next_states(curr_state, curr_colour)
             for state in newStates:
                 ## get depth 3 (last player)
                 if i == 2:
                     tmpBranch = {}
                     tmpBranch[state] = curr_state
-                    print("lol")
-                    ## ( {newstate : prevstate}, value )
-                    
+                    elem = ( tmpBranch, self.evaluation(curr_state, colours[j], curr_pieces) )
+                    lastBranch.add(elem)
                 else:
                     ## {newstate : prevstate}
                     branch[state] = curr_state
             tree.add(branch)
             curr_state = state
+            j+=1
 
-            ## iterate through the colour list
-            if colourInd >= 2:
-                j = 0
-            else:
-                j+=1
+        desiredMove = sorted(lastBranch[0], key=lambda move: move[1])[0]
+        prevPlayer2 = tree[1][desiredMove]
+        prevPlayer1 = tree[0][prevPlayer2]
+
+        return prevPlayer1
 
             
 
@@ -514,4 +538,4 @@ class ExamplePlayer:
         player2_pieces = [k for k,v in state.items() if v == player2]
         player3_pieces = [k for k,v in state.items() if v == player3]
 
-        return [player2_pieces, player3_pieces]
+        return [{player2:player2_pieces}, {player3: player3_pieces}]
