@@ -459,3 +459,40 @@ class ExamplePlayer:
 
 
 ## max^n algorithm => with cut off of 4
+
+    def maxN(self, pieces, state):
+        tree = []
+        colours = ['blue', 'red', 'green']
+        
+        
+        # initsialising player with colours
+        colourInd = colours.index(self.color)
+        myPieces = self.pieces.copy()
+        [player2_pieces, player3_pieces] = playerPieces(colours, self.colour, self.state)
+        
+        
+        
+        #iterate through each player
+        for i in range(3):
+            j = colourInd
+            curr_state = state.copy()
+            branch = {}
+            newStates = self.generate_next_states(curr_state)
+            for state in newStates:
+                ## {newstate : prevstate}
+                branch[state] = curr_state
+            tree.add(branch)
+            if colourInd >= 3:
+                j = 0
+        
+            
+
+    def playerPieces(colours, myColour, state):
+        colours.remove(myColour)
+        [player2,player3] = colours
+
+        ## find the pieces with the keys
+        player2_pieces = [k for k,v in state.items() if v == player2]
+        player3_pieces = [k for k,v in state.items() if v == player3]
+
+        return [player2_pieces, player3_pieces]
