@@ -121,7 +121,6 @@ class ExamplePlayer:
         if action[0] == 'PASS':
             pass
         elif isinstance(action[1][0], tuple):
-            print("NEW COORD")
             coord = action[1][0]
             new_coord = action[1][1]
             self.updated_board = self.update_board(self.updated_board, coord, new_coord)
@@ -139,7 +138,7 @@ class ExamplePlayer:
         # print("SELF.PIECES: ",self.colour, self.pieces,"\n\n")
     
     # uses a heuristic function to return a value for the given state
-    def heuristic(self, state, colour, exits):
+    def exit_distances(self, state, colour, exits):
         state_val = 0
         # iterate through all pieces on the board
         for piece in state:
@@ -353,7 +352,7 @@ class ExamplePlayer:
 
     # runs the a* algorithm to find the best moves to the goal state. derived from pseudocode
     # available on wikipedia.org
-    def a_star(self, start, goal):
+    '''def a_star(self, start, goal):
         # initialise state sets that a* keeps track of
         start = self.dict_to_tuple(start)
         closed_set = []
@@ -409,7 +408,7 @@ class ExamplePlayer:
                 # if this state is the best successor so far
                 came_from[tuple(next_state)] = current
                 g_cost[tuple(next_state)] = temp_g_cost
-                total_cost[tuple(next_state)] = g_cost[tuple(next_state)] + self.heuristic(next_state)
+                total_cost[tuple(next_state)] = g_cost[tuple(next_state)] + self.heuristic(next_state)'''
     
     def createBoard(self):
         ## creates initial board
@@ -495,17 +494,21 @@ class ExamplePlayer:
     def should_cutoff(self, depth):
         if depth >= CUTOFF_DEPTH:
             return True
-        # need to check for terminal state
+        for player in self.numexits:
+            if player >= 4:
+                return True
         return False
 
     def evaluation(self, state):
-        eval = []
+        evals = []
+        # ratio of importance
+        default_weight = (0.3, 0.2, 0.5)
         for player in PLAYER_LIST:
-            player_val = - self.heuristic(state,player, EXIT_DICT[player])
-
+            sum_distance = len(PLAYER_LIST)*MAX_DISTANCE - self.exit_distances(state, player, EXIT_DICT[player])
+            player_val = default_weight[0]*sum_distance + default_weight[1]*len(self.pieces) + default_weight[2]*self.numexits[PLAYER_LIST.index(player)]
             # do calculations, will probably have to count number of exits for each player
-            eval.append(player_val)
-        return eval
+            evals.append(player_val)
+        return evals
 
     def maxn(self, state, player, depth):
         player_index = PLAYER_LIST.index(player)
@@ -513,7 +516,6 @@ class ExamplePlayer:
             return (self.evaluation(state), None)
         v_max = [-math.inf, -math.inf, -math.inf]
         best_action = None
-        # doesn't currently deal with passes
         # print("STATE:",state)
         for next_state in self.generate_next_states(state, player):
             next_v = self.maxn(next_state, self.next_player(player), depth+1)[0]
