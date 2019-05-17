@@ -1,0 +1,4 @@
+1. allow for passes
+2. create list that keeps track of number of exits for each player
+3. come up and implement various eval tactics
+4. change action() to work with maxn
