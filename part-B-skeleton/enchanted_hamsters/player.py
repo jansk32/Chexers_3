@@ -526,7 +526,9 @@ class ExamplePlayer:
         prevPlayer2 = tree[1][desiredMove]
         prevPlayer1 = tree[0][prevPlayer2]
 
-        return prevPlayer1
+        ## to find the 0
+
+        return 
 
             
 
