@@ -136,7 +136,7 @@ class ExamplePlayer:
             self.updated_board = self.make_exit(coord, self.updated_board)
         self.board = dict(self.updated_board)
         self.pieces = self.updatePieces(self.updated_board)
-        print("SELF.PIECES: ",self.colour, self.pieces,"\n\n")
+        # print("SELF.PIECES: ",self.colour, self.pieces,"\n\n")
     
     # uses a heuristic function to return a value for the given state
     def heuristic(self, state, colour, exits):
@@ -256,7 +256,7 @@ class ExamplePlayer:
 
     #  prints output describing the move
     def format_move(self, old_coord, new_coord=None):
-        print("FORMAT MOVE:", old_coord, new_coord)
+        # print("FORMAT MOVE:", old_coord, new_coord)
         action = self.action_type(old_coord, new_coord)
         # if the action is an exit, remove piece from board
         if old_coord is None:
@@ -319,14 +319,14 @@ class ExamplePlayer:
         diff = [None, None]
         for piece in state1:
             if piece not in state2:
-                diff[0] = piece[0]
+                diff[0] = piece
                 # if a piece has exited between states, there is no new location
                 if len(state2) < len(state1):
                     return diff
                 # if a piece has moved between states, find new location
                 for new_piece in state2:
                     if new_piece not in state1:
-                        diff[1] = new_piece[0]
+                        diff[1] = new_piece
         return diff
 
     # reconstructs the path to the current node. based off webinar code provided by Matt Farrugia (2019)
@@ -514,12 +514,12 @@ class ExamplePlayer:
         v_max = [-math.inf, -math.inf, -math.inf]
         best_action = None
         # doesn't currently deal with passes
-        print("STATE:",state)
+        # print("STATE:",state)
         for next_state in self.generate_next_states(state, player):
             next_v = self.maxn(next_state, self.next_player(player), depth+1)[0]
             if next_v[player_index] > v_max[player_index]:
                 action_coords = self.state_diff(state, next_state)
-                print("ACTION COORDS:", action_coords)
+                # print("ACTION COORDS:", action_coords)
                 v_max = next_v
                 best_action = self.format_move(action_coords[0], action_coords[1])
         return (v_max, best_action)
