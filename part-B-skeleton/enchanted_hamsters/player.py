@@ -116,7 +116,7 @@ class ExamplePlayer:
         if action[0] == 'PASS':
             pass
         elif isinstance(action[1][0], tuple):
-            print("NEW COORD")
+            # print("NEW COORD")
             coord = action[1][0]
             new_coord = action[1][1]
             self.updated_board = self.update_board(self.updated_board, coord, new_coord)
@@ -129,7 +129,7 @@ class ExamplePlayer:
             self.updated_board = self.make_exit(coord, self.updated_board)
         self.board = dict(self.updated_board)
         self.pieces = self.updatePieces(self.updated_board)
-        print("SELF.PIECES: ",self.colour, self.pieces,"\n\n")
+        # print("SELF.PIECES: ",self.colour, self.pieces,"\n\n")
     
     # uses a heuristic function to return a value for the given state
     def heuristic(self, state):
@@ -438,11 +438,11 @@ class ExamplePlayer:
         diffY = y1-y2
 
         if abs(diffX) == 2 and diffY == 0:
-            return (x1-(1* np.sign(diffX)), y1)
+            return (int(x1-(1* np.sign(diffX))), y1)
         elif abs(diffX) == 2 and abs(diffY) == 2:
-            return (x1-(1* np.sign(diffX)), y1 - (1* np.sign(diffY)))
+            return (int(x1-(1* np.sign(diffX))), int(y1 - (1* np.sign(diffY))))
         elif diffX == 0 and abs(diffY) == 2:
-            return (x1, y1 -(1* np.sign(diffY)))
+            return (x1, int(y1 -(1* np.sign(diffY))))
         ## hardcode this???any simpler way
 
         ## could identify the direction (E, NE etc.) and select the space in that direction?
@@ -456,3 +456,43 @@ class ExamplePlayer:
     def evaluation(self, board):
         eval = []
         return eval
+
+
+## max^n algorithm => with cut off of 4
+
+    def maxN(self, pieces, state):
+        tree = []
+        colours = ['blue', 'red', 'green']
+        
+        
+        # initsialising player with colours
+        colourInd = colours.index(self.color)
+        myPieces = self.pieces.copy()
+        [player2_pieces, player3_pieces] = playerPieces(colours, self.colour, self.state)
+        
+        
+        
+        #iterate through each player
+        for i in range(3):
+            j = colourInd
+            curr_state = state.copy()
+            branch = {}
+            newStates = self.generate_next_states(curr_state)
+            for state in newStates:
+                ## {newstate : prevstate}
+                branch[state] = curr_state
+            tree.add(branch)
+            if colourInd >= 3:
+                j = 0
+        
+            
+
+    def playerPieces(colours, myColour, state):
+        colours.remove(myColour)
+        [player2,player3] = colours
+
+        ## find the pieces with the keys
+        player2_pieces = [k for k,v in state.items() if v == player2]
+        player3_pieces = [k for k,v in state.items() if v == player3]
+
+        return [player2_pieces, player3_pieces]
