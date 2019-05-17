@@ -279,6 +279,9 @@ class ExamplePlayer:
                         tmp_board = self.update_board(tmp_board, piece, move)
                         tmp_board = self.dict_to_tuple(tmp_board)
                         next_state.append(tmp_board)
+        if (len(next_state) == 0):
+            next_state.append(state)
+            return next_state
         return next_state
 
     # generates the goal state based on the initial board
