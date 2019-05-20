@@ -388,11 +388,11 @@ class ExamplePlayer:
         diffY = y1-y2
 
         if abs(diffX) == 2 and diffY == 0:
-            return (x1-(1* np.sign(diffX)), y1)
+            return (x1-int(1* np.sign(diffX)), y1)
         elif abs(diffX) == 2 and abs(diffY) == 2:
-            return (x1-(1* np.sign(diffX)), y1 - (1* np.sign(diffY)))
+            return (x1-int(1* np.sign(diffX)), y1 - int(1* np.sign(diffY)))
         elif diffX == 0 and abs(diffY) == 2:
-            return (x1, y1 -(1* np.sign(diffY)))
+            return (x1, y1 -int(1* np.sign(diffY)))
         ## hardcode this???any simpler way
 
         ## could identify the direction (E, NE etc.) and select the space in that direction?
