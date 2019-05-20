@@ -91,7 +91,7 @@ class ExamplePlayer:
         must be represented based on the above instructions for representing 
         actions.
         """
-        searched = self.maxn(self.board, self.colour, 0)[1]
+        searched = self.maxn(self.board, self.colour, 0, self.numexits)[1]
         if searched:
             return searched
         else :
@@ -416,46 +416,50 @@ class ExamplePlayer:
         return PLAYER_LIST[next_player_index]
 
     # determines if maxn should be cut off
-    def should_cutoff(self, depth):
+    def should_cutoff(self, depth, exits):
         if depth >= CUTOFF_DEPTH:
             return True
-        for player in self.numexits:
+        for player in exits:
             if player >= 4:
                 return True
         return False
 
-    def piece_eval(self, player, state):
+    def piece_eval(self, player, state, exits):
         numpieces = self.find_numpieces(player, state)
         if numpieces != 0:
-            ratio = (WINNING_EXITS - self.numexits[PLAYER_LIST.index(player)]) / self.find_numpieces(player, state)
+            ratio = (WINNING_EXITS - exits[PLAYER_LIST.index(player)]) / self.find_numpieces(player, state)
         else:
-            ratio = (WINNING_EXITS - self.numexits[PLAYER_LIST.index(player)])
+            ratio = (WINNING_EXITS - exits[PLAYER_LIST.index(player)])
 
         return (1 - abs(1 - ratio)) * PIECE_SCALE
 
-    def evaluation(self, state):
+    def evaluation(self, state, exits):
         evals = []
         weights = [(1, 1, 1)]
         for player in PLAYER_LIST:
             distance_eval = (MAX_DISTANCE - self.exit_distances(state, player))*DIST_SCALE
-            exits_eval = self.numexits[PLAYER_LIST.index(player)]*EXIT_SCALE
-            piece_eval = self.piece_eval(player, state)
+            exits_eval = exits[PLAYER_LIST.index(player)]*EXIT_SCALE
+            piece_eval = self.piece_eval(player, state, exits)
             player_val = weights[0][0] * distance_eval + weights[0][1] * exits_eval + weights[0][2] * piece_eval
             evals.append(player_val)
         return evals
 
-    def maxn(self, state, player, depth):
+    def maxn(self, state, player, depth, exits):
+        tmp_exits = exits.copy()
         player_index = PLAYER_LIST.index(player)
-        if self.should_cutoff(depth):
-            return (self.evaluation(state), None)
+        if self.should_cutoff(depth, tmp_exits):
+            return (self.evaluation(state, tmp_exits), None)
         v_max = [-math.inf, -math.inf, -math.inf]
         best_action = None
         for next_state in self.generate_next_states(state, player):
-            next_v = self.maxn(next_state, self.next_player(player), depth+1)[0]
+            action_coords = self.state_diff(state, next_state)
+            if action_coords[0] is not None and action_coords[1] is None:
+                tmp_exits[player_index] += 1
+            next_v = self.maxn(next_state, self.next_player(player), depth+1, tmp_exits)[0]
             if next_v[player_index] > v_max[player_index]:
-                action_coords = self.state_diff(state, next_state)
                 v_max = next_v
                 best_action = self.format_move(action_coords[0], action_coords[1])
+            tmp_exits = exits.copy()
         return (v_max, best_action)
 
 
