@@ -1,15 +1,7 @@
-1. allow for passes
-2. create list that keeps track of number of exits for each player
-3. come up and implement various eval tactics
-4. change action() to work with maxn
+1. report
 
-
--distance- maximum of 7
--num pieces (4, 5, 6 optimal, minimum of 0, max of 12)
--num exits minimum 0, max of 4/
-
-if we have less pieces than we need to win, then aim for other pieces/don't try to exit/reduce weighting of distance.
-if we are the last ones left, then increase weighting of distance, decrease weighting of numpieces and exits
-if another player is close to winning (i.e. 3 exits), and we are not, then get defensive.
-if we are close to winning, try to exit everything asap.
+2. avoid repeated states (if this happens often)
+3. see how deep we can go without running too long
+4. pruning?????
+5. trial and error weighting
 
