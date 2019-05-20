@@ -90,7 +90,7 @@ class ExamplePlayer:
         # if (len(self.pieces) == 0):
         #     return ("PASS", None)
         # goal = self.generate_goal()
-        searched = self.maxn(self.board,self.colour,0)[1]
+        searched = self.maxn(self.numexits,self.board, self.colour,0)[1]
         if (searched):
             return searched
         else :
@@ -421,13 +421,6 @@ class ExamplePlayer:
             board[red] = 'red'
         return board
 
-    ## determining if a player can be captured in the next step
-    def canBeCaptured(self, coord, next_state):
-        new = self.generate_next_states(next_state)
-        for space in new:
-            if space in self.board and self.board[space] != self.colour:
-                return True
-        return False
 
     ## aim for corners
     def aimCorners(self, board, colour):
@@ -499,31 +492,66 @@ class ExamplePlayer:
                 return True
         return False
 
-    def evaluation(self, state):
+    def generate_surroundings(self, coord, colour):
+        x = coord[0]
+        y = coord[1]
+        move_list = []
+        # show ALL moves
+        move_list.append((x + 1, y))
+        move_list.append((x + 1, y - 1))
+        move_list.append((x, y + 1))
+        move_list.append((x - 1, y))
+        move_list.append((x - 1, y + 1))
+        move_list.append((x, y - 1))
+        return move_list
+    
+    def canBeCaptured(self, state, colour):
+        evaluationNum = 0
+        for space in list(state.keys()):
+            ## check surroundings
+            if state[space] == colour:
+                surroundings = self.generate_surroundings(space, colour)
+                for possibleEnemy in surroundings:
+                    if possibleEnemy in list(state.keys()) and state[possibleEnemy] != colour:
+                        evaluationNum += 1
+                    else:
+                        continue
+
+        return evaluationNum
+
+    def evaluation(self, state, exits):
         evals = []
         # ratio of importance
-        default_weight = (0.3, 0.2, 0.5)
+        default_weight = (0.3, 0.3, 0.2, 0.4)
         for player in PLAYER_LIST:
             sum_distance = len(PLAYER_LIST)*MAX_DISTANCE - self.exit_distances(state, player, EXIT_DICT[player])
-            player_val = default_weight[0]*sum_distance + default_weight[1]*len(self.pieces) + default_weight[2]*self.numexits[PLAYER_LIST.index(player)]
+            # caught = self.canBeCaptured(state, player)
+            player_val = default_weight[0]*sum_distance + default_weight[1]*len(self.pieces) + default_weight[2]*exits[PLAYER_LIST.index(player)] 
+            # + default_weight[3]*caught
             # do calculations, will probably have to count number of exits for each player
             evals.append(player_val)
+        
         return evals
 
-    def maxn(self, state, player, depth):
+    def maxn(self, exits, state, player, depth):
+        tmp_exits = exits.copy()
+        print(tmp_exits)
         player_index = PLAYER_LIST.index(player)
         if self.should_cutoff(depth):
-            return (self.evaluation(state), None)
+            # print(self.evaluation(state))
+            return (self.evaluation(state, tmp_exits), None)
         v_max = [-math.inf, -math.inf, -math.inf]
         best_action = None
         # print("STATE:",state)
         for next_state in self.generate_next_states(state, player):
-            next_v = self.maxn(next_state, self.next_player(player), depth+1)[0]
+            next_v = self.maxn(tmp_exits, next_state, self.next_player(player), depth+1)[0]
             if next_v[player_index] > v_max[player_index]:
                 action_coords = self.state_diff(state, next_state)
                 # print("ACTION COORDS:", action_coords)
                 v_max = next_v
                 best_action = self.format_move(action_coords[0], action_coords[1])
+                if best_action[0] == 'EXIT':
+                    tmp_exits[player_index] += 1
         return (v_max, best_action)
 
 
