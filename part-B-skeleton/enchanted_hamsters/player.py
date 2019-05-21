@@ -126,7 +126,7 @@ class ExamplePlayer:
             if action[0] == 'JUMP':
                 jumpedover = self.isJumped(coord, new_coord)
                 self.updated_board = self.jump_update(self.updated_board, jumpedover, colour)
-                print(self.updated_board)
+                # print(self.updated_board)
         elif action[0] == 'EXIT':
             colour_index = PLAYER_LIST.index(colour)
             self.numexits[colour_index] += 1
