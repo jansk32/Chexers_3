@@ -1,1 +1,1 @@
-from minimax.player import ExamplePlayer as Player
+from .player import ExamplePlayer as Player
