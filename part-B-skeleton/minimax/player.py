@@ -1,9 +1,7 @@
 import math
 import numpy as np
-import rule_implementation
-import maxn
 
-    # coordinate indexes
+# coordinate indexes
 X = 0
 Y = 1
 
@@ -14,8 +12,6 @@ DIRECTION_SW = 2
 DIRECTION_W = 3
 DIRECTION_NW = 4
 DIRECTION_NE = 5
-
-# PLAYER_TYPE = ''
 
 BOARD_EDGE = 3
 MAX_DISTANCE = 7
@@ -40,15 +36,17 @@ BLUE_STARTS = [(0, 3), (1, 2), (2, 1), (3, 0)]
 # temporary holding place for exiting pieces
 EXIT_LOC = (3, 1)
 
-CUTOFF_DEPTH = 3
 PLAYER_LIST = ['red', 'green', 'blue']
 
 WINNING_EXITS = 4
 
+CUTOFF_DEPTH = 3
 # scaling factors for eval function
 DIST_SCALE = 10/7
 PIECE_SCALE = 10
 EXIT_SCALE = 10/4
+
+
 
 class ExamplePlayer:
     def __init__(self, colour):
@@ -138,6 +136,86 @@ class ExamplePlayer:
         self.board = dict(self.updated_board)
         self.pieces = self.updatePieces(self.updated_board)
 
+
+    #determines if maxn should be cut off
+    def should_cutoff(self, depth, exits):
+        if depth >= CUTOFF_DEPTH:
+            return True
+        for player in exits:
+            if player >= 4:
+                return True
+        return False
+
+
+    def piece_eval(self, player, state, exits):
+        numpieces = self.find_numpieces(player, state)
+        if numpieces != 0:
+            ratio = (WINNING_EXITS - exits[PLAYER_LIST.index(player)]) / self.find_numpieces(player, state)
+        else:
+            ratio = (WINNING_EXITS - exits[PLAYER_LIST.index(player)])
+        if (1 - abs(1 - ratio)) <= 0:
+            return 0
+        return (1 - abs(1 - ratio)) * PIECE_SCALE
+
+
+    def evaluation(self, state, exits):
+        evals = []
+        weights = [4, 3, 2]
+        captured_weight = 1
+        for player in PLAYER_LIST:
+            if (self.find_numpieces(player, state) + exits[PLAYER_LIST.index(player)] < 4):
+                captured_weight = 3
+                weights = [2, 3, 5]
+            elif (self.find_numpieces(player, state) + exits[PLAYER_LIST.index(player)] > 5):
+                weights = [2, 2, 4]
+            distance_eval = (MAX_DISTANCE - self.exit_distances(state, player)) * DIST_SCALE
+            exits_eval = exits[PLAYER_LIST.index(player)] * EXIT_SCALE
+            piece_eval = self.piece_eval(player, state, exits)
+            captured = self.canBeCaptured(state, player)
+            player_val = weights[0] * distance_eval + weights[1] * exits_eval + weights[
+                2] * piece_eval + captured_weight * captured
+            evals.append(player_val)
+        return evals
+
+
+    def maxn(self, state, player, depth, exits):
+        tmp_exits = exits.copy()
+        player_index = PLAYER_LIST.index(player)
+        if self.should_cutoff(depth, tmp_exits):
+            return (self.evaluation(state, tmp_exits), None)
+        v_max = [-math.inf, -math.inf, -math.inf]
+        best_action = None
+        for next_state in self.generate_next_states(state, player):
+            action_coords = self.state_diff(state, next_state)
+            if action_coords[0] is not None and action_coords[1] is None:
+                tmp_exits[player_index] += 1
+            next_v = self.maxn(next_state, self.next_player(player), depth + 1, tmp_exits)[0]
+            if next_v[player_index] > v_max[player_index]:
+                v_max = next_v
+                best_action = self.format_move(action_coords[0], action_coords[1])
+            tmp_exits = exits.copy()
+        return (v_max, best_action)
+
+    def startinPieces(self, colour):
+        if colour == "red":
+            pieces = RED_STARTS
+        elif colour == "green":
+            pieces = GREEN_STARTS
+        else:
+            pieces = BLUE_STARTS
+        return pieces
+
+    def createBoard(self):
+        # creates initial board
+        board = {}
+        for blue in BLUE_STARTS:
+            board[blue] = 'blue'
+        for green in GREEN_STARTS:
+            board[green] = 'green'
+        for red in RED_STARTS:
+            board[red] = 'red'
+        return board
+    
     # calculates the average distance from the exits of a player's pieces
     def exit_distances(self, state, colour):
         state_val = 0
@@ -157,18 +235,21 @@ class ExamplePlayer:
                 state_val += min_piece_distance
         # assume the average distance of no pieces is in the middle
         if piece_count == 0:
-            return MAX_DISTANCE/2
-        return state_val/piece_count
+            return MAX_DISTANCE / 2
+        return state_val / piece_count
+
 
     # returns the mathematical z coordinate of a space given its x and y coordinate
     def z_coordinate(self, coord):
         return -(coord[X]) - coord[Y]
+
 
     # returns the minimum number of spaces to traverse between two spaces
     def distance(self, coord1, coord2):
         z_coord1 = self.z_coordinate(coord1)
         z_coord2 = self.z_coordinate(coord2)
         return int((abs(coord2[X] - coord1[X]) + abs(coord2[Y] - coord1[Y]) + abs(z_coord2 - z_coord1)) / 2)
+
 
     # identifies if a given space has an object on it or not
     def is_empty_space(self, coord):
@@ -178,11 +259,13 @@ class ExamplePlayer:
             return True
         return False
 
+
     # returns a boolean value indicating whether a given coordinate is on the board
     def is_on_board(self, x, y):
         if abs(x) > BOARD_EDGE or abs(y) > BOARD_EDGE or abs(self.z_coordinate((x, y))) > BOARD_EDGE:
             return False
         return True
+
 
     def can_exit(self, state, piece):
         if state[piece] == 'red':
@@ -195,6 +278,7 @@ class ExamplePlayer:
             if piece in BLUE_EXITS:
                 return True
         return False
+
 
     # returns list of all possible hexes a piece can move or jump to, given the piece's location
     def can_move(self, coord):
@@ -232,6 +316,7 @@ class ExamplePlayer:
             move_list[DIRECTION_NW] = (x, y - 2)
         return move_list
 
+
     # indicates whether an action is an exit, move or a jump
     def action_type(self, old_coord, new_coord):
         if old_coord is None:
@@ -245,23 +330,25 @@ class ExamplePlayer:
         else:
             return None
 
+
     # converts a dictionary to a tuple format
     def dict_to_tuple(self, state):
         a = tuple(state.items())
         return a
 
+
     # updates the input board
     def update_board(self, board, coord, new_coord):
-
         # remove the old coordinate's player
         color = board[coord]
-        if self.distance(coord, new_coord)==2:
+        if self.distance(coord, new_coord) == 2:
             self.jump_update(board, self.isJumped(coord, new_coord), color)
         del board[coord]
         # place the player on the new coordinate
         if new_coord != EXIT_LOC:
             board[new_coord] = color
         return board
+
 
     #  formats output describing the move
     def format_move(self, old_coord, new_coord=None):
@@ -273,7 +360,8 @@ class ExamplePlayer:
             return (action, tuple(old_coord))
         # if the action is a move or jump, move piece to its next location
         else:
-            return (action,(tuple(old_coord), tuple(new_coord)))
+            return (action, (tuple(old_coord), tuple(new_coord)))
+
 
     # generates a list of states showing the next possible actions
     def generate_next_states(self, state, colour):
@@ -295,6 +383,7 @@ class ExamplePlayer:
             return next_state
         return next_state
 
+
     # finds the difference between two states
     def state_diff(self, state1, state2):
         diff = [None, None]
@@ -309,6 +398,7 @@ class ExamplePlayer:
                     if new_piece not in state1:
                         diff[1] = new_piece
         return diff
+
 
     # reconstructs the path to the current node. based off webinar code provided by Matt Farrugia (2019)
     def construct_path(self, came_from, goal):
@@ -327,21 +417,12 @@ class ExamplePlayer:
         #     action = self.state_diff(state, path[path.index(state) + 1])
         #     self.print_move(action[0], action[1])
 
+
     # removes a certain piece from the board
     def make_exit(self, coord, state):
         del state[coord]
         return state
 
-    def createBoard(self):
-        # creates initial board
-        board = {}
-        for blue in BLUE_STARTS:
-            board[blue] = 'blue'
-        for green in GREEN_STARTS:
-            board[green] = 'green'
-        for red in RED_STARTS:
-            board[red] = 'red'
-        return board
 
     ## aim for corners
     def aimCorners(self, board, colour):
@@ -353,6 +434,7 @@ class ExamplePlayer:
         else:
             self.exits = BLUE_CORNERS
 
+
     def startinPieces(self, colour):
         if colour == "red":
             pieces = RED_STARTS
@@ -362,6 +444,7 @@ class ExamplePlayer:
             pieces = BLUE_STARTS
         return pieces
 
+
     ## update pieces
     def updatePieces(self, board):
         pieces = []
@@ -370,28 +453,30 @@ class ExamplePlayer:
                 pieces.append(piece)
         return pieces
 
+
     def isJumped(self, oldcoord, newcoord):
-        #newcoord x,y
+        # newcoord x,y
         x1 = newcoord[0]
         y1 = newcoord[1]
 
-        #oldcoord x,y
+        # oldcoord x,y
         x2 = oldcoord[0]
         y2 = oldcoord[1]
 
         # diff x,y
-        diffX = x1-x2
-        diffY = y1-y2
+        diffX = x1 - x2
+        diffY = y1 - y2
 
         if abs(diffX) == 2 and diffY == 0:
-            return (x1-int(1* np.sign(diffX)), y1)
+            return (x1 - int(1 * np.sign(diffX)), y1)
         elif abs(diffX) == 2 and abs(diffY) == 2:
-            return (x1-int(1* np.sign(diffX)), y1 - int(1* np.sign(diffY)))
+            return (x1 - int(1 * np.sign(diffX)), y1 - int(1 * np.sign(diffY)))
         elif diffX == 0 and abs(diffY) == 2:
-            return (x1, y1 -int(1* np.sign(diffY)))
+            return (x1, y1 - int(1 * np.sign(diffY)))
         ## hardcode this???any simpler way
 
         ## could identify the direction (E, NE etc.) and select the space in that direction?
+
 
     def find_numpieces(self, colour, state):
         numpieces = 0
@@ -400,35 +485,18 @@ class ExamplePlayer:
                 numpieces += 1
         return numpieces
 
+
     # update the board with a jump
     def jump_update(self, board, coord, colour):
         # del board[coord]
         board[coord] = colour
         return board
 
+
     # returns the colour of the next player
     def next_player(self, colour):
-        next_player_index = (PLAYER_LIST.index(colour)+1)%len(PLAYER_LIST)
+        next_player_index = (PLAYER_LIST.index(colour) + 1) % len(PLAYER_LIST)
         return PLAYER_LIST[next_player_index]
-
-    # determines if maxn should be cut off
-    def should_cutoff(self, depth, exits):
-        if depth >= CUTOFF_DEPTH:
-            return True
-        for player in exits:
-            if player >= 4:
-                return True
-        return False
-
-    def piece_eval(self, player, state, exits):
-        numpieces = self.find_numpieces(player, state)
-        if numpieces != 0:
-            ratio = (WINNING_EXITS - exits[PLAYER_LIST.index(player)]) / self.find_numpieces(player, state)
-        else:
-            ratio = (WINNING_EXITS - exits[PLAYER_LIST.index(player)])
-        if (1 - abs(1 - ratio)) <= 0:
-            return 0
-        return (1 - abs(1 - ratio)) * PIECE_SCALE
 
 
     def generate_surroundings(self, coord, colour):
@@ -444,6 +512,7 @@ class ExamplePlayer:
         move_list.append((x, y - 1))
         return move_list
 
+
     def canBeCaptured(self, state, colour):
         evaluationNum = 0
         for space in list(state.keys()):
@@ -457,44 +526,3 @@ class ExamplePlayer:
                         continue
 
         return evaluationNum
-
-    def evaluation(self, state, exits):
-        evals = []
-        weights = [4, 3, 2]
-        captured_weight = 1
-        for player in PLAYER_LIST:
-            if (self.find_numpieces(player, state) + exits[PLAYER_LIST.index(player)] < 4):
-                captured_weight = 3
-                weights = [2,3,5]
-            elif(self.find_numpieces(player, state) + exits[PLAYER_LIST.index(player)]  > 5):
-                weights = [2,2,4]
-            distance_eval = (MAX_DISTANCE - self.exit_distances(state, player))*DIST_SCALE
-            exits_eval = exits[PLAYER_LIST.index(player)]*EXIT_SCALE
-            piece_eval = self.piece_eval(player, state, exits)
-            captured = self.canBeCaptured(state,player)
-            player_val = weights[0] * distance_eval + weights[1] * exits_eval + weights[2] * piece_eval + captured_weight *captured
-            evals.append(player_val)
-        return evals
-
-    def maxn(self, state, player, depth, exits):
-        tmp_exits = exits.copy()
-        player_index = PLAYER_LIST.index(player)
-        if self.should_cutoff(depth, tmp_exits):
-            return (self.evaluation(state, tmp_exits), None)
-        v_max = [-math.inf, -math.inf, -math.inf]
-        best_action = None
-        for next_state in self.generate_next_states(state, player):
-            action_coords = self.state_diff(state, next_state)
-            if action_coords[0] is not None and action_coords[1] is None:
-                tmp_exits[player_index] += 1
-            next_v = self.maxn(next_state, self.next_player(player), depth+1, tmp_exits)[0]
-            if next_v[player_index] > v_max[player_index]:
-                v_max = next_v
-                best_action = self.format_move(action_coords[0], action_coords[1])
-            tmp_exits = exits.copy()
-        return (v_max, best_action)
-
-
-
-
-
