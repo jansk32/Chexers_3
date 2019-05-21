@@ -136,7 +136,6 @@ class ExamplePlayer:
         self.board = dict(self.updated_board)
         self.pieces = self.updatePieces(self.updated_board)
 
-
     #determines if maxn should be cut off
     def should_cutoff(self, depth, exits):
         if depth >= CUTOFF_DEPTH:
@@ -473,9 +472,6 @@ class ExamplePlayer:
             return (x1 - int(1 * np.sign(diffX)), y1 - int(1 * np.sign(diffY)))
         elif diffX == 0 and abs(diffY) == 2:
             return (x1, y1 - int(1 * np.sign(diffY)))
-        ## hardcode this???any simpler way
-
-        ## could identify the direction (E, NE etc.) and select the space in that direction?
 
 
     def find_numpieces(self, colour, state):
@@ -491,8 +487,7 @@ class ExamplePlayer:
         # del board[coord]
         board[coord] = colour
         return board
-
-
+ 
     # returns the colour of the next player
     def next_player(self, colour):
         next_player_index = (PLAYER_LIST.index(colour) + 1) % len(PLAYER_LIST)
