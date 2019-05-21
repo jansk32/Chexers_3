@@ -251,8 +251,11 @@ class ExamplePlayer:
 
     # updates the input board
     def update_board(self, board, coord, new_coord):
+        
         # remove the old coordinate's player
         color = board[coord]
+        if self.distance(coord, new_coord)==2:
+            self.jump_update(board, self.isJumped(coord, new_coord), color)
         del board[coord]
         # place the player on the new coordinate
         if new_coord != EXIT_LOC:
@@ -339,14 +342,6 @@ class ExamplePlayer:
             board[red] = 'red'
         return board
 
-    ## determining if a player can be captured in the next step
-    def canBeCaptured(self, coord, next_state):
-        new = self.generate_next_states(next_state)
-        for space in new:
-            if space in self.board and self.board[space] != self.colour:
-                return True
-        return False
-
     ## aim for corners
     def aimCorners(self, board, colour):
         ## only implemented when flag indicates to use this
@@ -406,7 +401,7 @@ class ExamplePlayer:
     
     # update the board with a jump
     def jump_update(self, board, coord, colour):
-        del board[coord]
+        # del board[coord]
         board[coord] = colour
         return board
 
@@ -433,14 +428,49 @@ class ExamplePlayer:
 
         return (1 - abs(1 - ratio)) * PIECE_SCALE
 
+
+    def generate_surroundings(self, coord, colour):
+        x = coord[0]
+        y = coord[1]
+        move_list = []
+        # show ALL moves
+        move_list.append((x + 1, y))
+        move_list.append((x + 1, y - 1))
+        move_list.append((x, y + 1))
+        move_list.append((x - 1, y))
+        move_list.append((x - 1, y + 1))
+        move_list.append((x, y - 1))
+        return move_list
+    
+    def canBeCaptured(self, state, colour):
+        evaluationNum = 0
+        for space in list(state.keys()):
+            ## check surroundings
+            if state[space] == colour:
+                surroundings = self.generate_surroundings(space, colour)
+                for possibleEnemy in surroundings:
+                    if possibleEnemy in list(state.keys()) and state[possibleEnemy] != colour:
+                        evaluationNum += 1
+                    else:
+                        continue
+
+        return evaluationNum
+    
     def evaluation(self, state, exits):
         evals = []
-        weights = [(1, 1, 1)]
+        weights = [4, 3, 2]
+        captured_weight = 1
         for player in PLAYER_LIST:
+            if (self.find_numpieces(player, state) + exits[PLAYER_LIST.index(player)] < 4):
+                captured_weight = 3
+                weights = [2,3,5]
+            elif(self.find_numpieces(player, state) + exits[PLAYER_LIST.index(player)]  > 5):
+                weights = [2,2,4]
             distance_eval = (MAX_DISTANCE - self.exit_distances(state, player))*DIST_SCALE
             exits_eval = exits[PLAYER_LIST.index(player)]*EXIT_SCALE
             piece_eval = self.piece_eval(player, state, exits)
-            player_val = weights[0][0] * distance_eval + weights[0][1] * exits_eval + weights[0][2] * piece_eval
+            captured = self.canBeCaptured(state,player)
+            player_val = weights[0] * distance_eval + weights[1] * exits_eval + weights[2] * piece_eval + captured_weight *captured
             evals.append(player_val)
         return evals
 
