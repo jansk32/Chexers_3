@@ -1,6 +1,7 @@
-from collections import defaultdict
 import math
 import numpy as np
+import rule_implementation
+import maxn
 
     # coordinate indexes
 X = 0
@@ -136,7 +137,7 @@ class ExamplePlayer:
         # make final updates
         self.board = dict(self.updated_board)
         self.pieces = self.updatePieces(self.updated_board)
-    
+
     # calculates the average distance from the exits of a player's pieces
     def exit_distances(self, state, colour):
         state_val = 0
@@ -251,7 +252,7 @@ class ExamplePlayer:
 
     # updates the input board
     def update_board(self, board, coord, new_coord):
-        
+
         # remove the old coordinate's player
         color = board[coord]
         if self.distance(coord, new_coord)==2:
@@ -330,7 +331,7 @@ class ExamplePlayer:
     def make_exit(self, coord, state):
         del state[coord]
         return state
-    
+
     def createBoard(self):
         # creates initial board
         board = {}
@@ -398,7 +399,7 @@ class ExamplePlayer:
             if piece[1] == colour:
                 numpieces += 1
         return numpieces
-    
+
     # update the board with a jump
     def jump_update(self, board, coord, colour):
         # del board[coord]
@@ -442,7 +443,7 @@ class ExamplePlayer:
         move_list.append((x - 1, y + 1))
         move_list.append((x, y - 1))
         return move_list
-    
+
     def canBeCaptured(self, state, colour):
         evaluationNum = 0
         for space in list(state.keys()):
@@ -456,7 +457,7 @@ class ExamplePlayer:
                         continue
 
         return evaluationNum
-    
+
     def evaluation(self, state, exits):
         evals = []
         weights = [4, 3, 2]
