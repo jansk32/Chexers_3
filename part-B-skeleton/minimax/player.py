@@ -425,7 +425,8 @@ class ExamplePlayer:
             ratio = (WINNING_EXITS - exits[PLAYER_LIST.index(player)]) / self.find_numpieces(player, state)
         else:
             ratio = (WINNING_EXITS - exits[PLAYER_LIST.index(player)])
-
+        if (1 - abs(1 - ratio)) <= 0:
+            return 0
         return (1 - abs(1 - ratio)) * PIECE_SCALE
 
 
