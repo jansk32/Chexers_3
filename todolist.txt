@@ -1,0 +1,7 @@
+1. report
+
+2. avoid repeated states (if this happens often)
+3. see how deep we can go without running too long
+4. pruning?????
+5. trial and error weighting
+
