@@ -41,6 +41,7 @@ PLAYER_LIST = ['red', 'green', 'blue']
 WINNING_EXITS = 4
 
 CUTOFF_DEPTH = 3
+
 # scaling factors for eval function
 DIST_SCALE = 10/7
 PIECE_SCALE = 10
@@ -60,13 +61,8 @@ class ExamplePlayer:
         program will play as (Red, Green or Blue). The value will be one of the 
         strings "red", "green", or "blue" correspondingly.
         """
-        # TODO: Set up state representation.
+        # set up state representation
         self.colour = colour
-        # to decide what the initial pieces are
-        self.pieces = []
-        pieces = self.startinPieces(self.colour)
-        for i in pieces:
-            self.pieces.append(tuple(i))
         self.board = self.createBoard()
         self.updated_board = self.createBoard()
         self.numexits = [0, 0, 0]
@@ -124,9 +120,9 @@ class ExamplePlayer:
             self.updated_board = self.update_board(self.updated_board, coord, new_coord)
             # change the colour of a piece that is jumped over
             if action[0] == 'JUMP':
-                jumpedover = self.isJumped(coord, new_coord)
+                jumpedover = self.jumped_piece(coord, new_coord)
                 self.updated_board = self.jump_update(self.updated_board, jumpedover, colour)
-                # print(self.updated_board)
+        # if the action is an exit
         elif action[0] == 'EXIT':
             colour_index = PLAYER_LIST.index(colour)
             self.numexits[colour_index] += 1
@@ -134,68 +130,14 @@ class ExamplePlayer:
             self.updated_board = self.make_exit(coord, self.updated_board)
         # make final updates
         self.board = dict(self.updated_board)
-        self.pieces = self.updatePieces(self.updated_board)
-
-    #determines if maxn should be cut off
-    def should_cutoff(self, depth, exits):
-        if depth >= CUTOFF_DEPTH:
-            return True
-        for player in exits:
-            if player >= 4:
-                return True
-        return False
-
-
-    def piece_eval(self, player, state, exits):
-        numpieces = self.find_numpieces(player, state)
-        if numpieces != 0:
-            ratio = (WINNING_EXITS - exits[PLAYER_LIST.index(player)]) / self.find_numpieces(player, state)
-        else:
-            ratio = (WINNING_EXITS - exits[PLAYER_LIST.index(player)])
-        if (1 - abs(1 - ratio)) <= 0:
-            return 0
-        return (1 - abs(1 - ratio)) * PIECE_SCALE
-
-
-    def evaluation(self, state, exits):
-        evals = []
-        weights = [4, 3, 2]
-        captured_weight = 1
-        for player in PLAYER_LIST:
-            if (self.find_numpieces(player, state) + exits[PLAYER_LIST.index(player)] < 4):
-                captured_weight = 3
-                weights = [2, 3, 5]
-            elif (self.find_numpieces(player, state) + exits[PLAYER_LIST.index(player)] > 5):
-                weights = [2, 2, 4]
-            distance_eval = (MAX_DISTANCE - self.exit_distances(state, player)) * DIST_SCALE
-            exits_eval = exits[PLAYER_LIST.index(player)] * EXIT_SCALE
-            piece_eval = self.piece_eval(player, state, exits)
-            captured = self.canBeCaptured(state, player)
-            player_val = weights[0] * distance_eval + weights[1] * exits_eval + weights[
-                2] * piece_eval + captured_weight * captured
-            evals.append(player_val)
-        return evals
-
-
-    def maxn(self, state, player, depth, exits):
-        tmp_exits = exits.copy()
-        player_index = PLAYER_LIST.index(player)
-        if self.should_cutoff(depth, tmp_exits):
-            return (self.evaluation(state, tmp_exits), None)
-        v_max = [-math.inf, -math.inf, -math.inf]
-        best_action = None
-        for next_state in self.generate_next_states(state, player):
-            action_coords = self.state_diff(state, next_state)
-            if action_coords[0] is not None and action_coords[1] is None:
-                tmp_exits[player_index] += 1
-            next_v = self.maxn(next_state, self.next_player(player), depth + 1, tmp_exits)[0]
-            if next_v[player_index] > v_max[player_index]:
-                v_max = next_v
-                best_action = self.format_move(action_coords[0], action_coords[1])
-            tmp_exits = exits.copy()
-        return (v_max, best_action)
 
     def startinPieces(self, colour):
+        """
+        This function finds the initial piece locations for a player.
+        :param colour: the colour of the player in question
+        :return: a list of the piece coordinates
+        """
+
         if colour == "red":
             pieces = RED_STARTS
         elif colour == "green":
@@ -205,7 +147,9 @@ class ExamplePlayer:
         return pieces
 
     def createBoard(self):
-        # creates initial board
+        """
+        This function creates the initial board state.
+        """
         board = {}
         for blue in BLUE_STARTS:
             board[blue] = 'blue'
@@ -214,9 +158,14 @@ class ExamplePlayer:
         for red in RED_STARTS:
             board[red] = 'red'
         return board
-    
-    # calculates the average distance from the exits of a player's pieces
+
     def exit_distances(self, state, colour):
+        """
+        This function averages the distance of all a player's pieces from the exits.
+        :param state: the current board state
+        :param colour: the colour of the player
+        :return: the average distance from the exits
+        """
         state_val = 0
         piece_count = 0
         exits = EXIT_DICT[colour]
@@ -237,36 +186,55 @@ class ExamplePlayer:
             return MAX_DISTANCE / 2
         return state_val / piece_count
 
-
-    # returns the mathematical z coordinate of a space given its x and y coordinate
     def z_coordinate(self, coord):
+        """
+        Gives the mathematical z-coordinate of a space, given its x and y coordinates
+        :param coord: a two-tuple containing the x and y coordinates of a space
+        :return: the value of the z-coordinate
+        """
         return -(coord[X]) - coord[Y]
 
-
-    # returns the minimum number of spaces to traverse between two spaces
     def distance(self, coord1, coord2):
+        """
+        Calculates the Euclidean heaxagonal distance between two spaces
+        :param coord1: a tuple containing an x and y coordinate
+        :param coord2: a second tuple containing an x and y coordinate
+        :return: the number of spaces need to traverse from coord1 to coord2
+        """
         z_coord1 = self.z_coordinate(coord1)
         z_coord2 = self.z_coordinate(coord2)
         return int((abs(coord2[X] - coord1[X]) + abs(coord2[Y] - coord1[Y]) + abs(z_coord2 - z_coord1)) / 2)
 
-
-    # identifies if a given space has an object on it or not
     def is_empty_space(self, coord):
+        """
+        Determines if a space has a piece on it.
+        :param coord: the x and y coordinates of the space
+        :return: a boolean value indicating True if there is no piece on the space, False otherwise.
+        """
         if not self.is_on_board(coord[X], coord[Y]):
             return False
         elif coord not in self.board or self.board[coord] == "":
             return True
         return False
 
-
-    # returns a boolean value indicating whether a given coordinate is on the board
     def is_on_board(self, x, y):
+        """
+        Determines if a space is part of the game board.
+        :param x: x coordinate of the space
+        :param y: y coordinate of the space
+        :return: boolean True if the space is part of the game board, False otherwise
+        """
         if abs(x) > BOARD_EDGE or abs(y) > BOARD_EDGE or abs(self.z_coordinate((x, y))) > BOARD_EDGE:
             return False
         return True
 
-
     def can_exit(self, state, piece):
+        """
+        Determines if a particular piece is able to exit.
+        :param state: the current game state
+        :param piece: a tuple indicating the coordinates of the piece
+        :return: a boolean value of True if the piece is located on an exit of its colour
+        """
         if state[piece] == 'red':
             if piece in RED_EXITS:
                 return True
@@ -278,9 +246,12 @@ class ExamplePlayer:
                 return True
         return False
 
-
-    # returns list of all possible hexes a piece can move or jump to, given the piece's location
     def can_move(self, coord):
+        """
+        Finds all the legal moves or jumps a piece can make
+        :param coord: the location of the piece
+        :return: a list containing the coordinates of the piece's next possible locations
+        """
         [x, y] = coord
         move_list = [None] * 6
         # check if a move or jump can be made to the east
@@ -315,9 +286,13 @@ class ExamplePlayer:
             move_list[DIRECTION_NW] = (x, y - 2)
         return move_list
 
-
-    # indicates whether an action is an exit, move or a jump
     def action_type(self, old_coord, new_coord):
+        """
+        Determines what type of action is made by a piece
+        :param old_coord: the location of the piece before the move
+        :param new_coord: the location of the piece after the move
+        :return: a string indicating the action type
+        """
         if old_coord is None:
             return "PASS"
         elif new_coord is None:
@@ -329,28 +304,35 @@ class ExamplePlayer:
         else:
             return None
 
-
-    # converts a dictionary to a tuple format
     def dict_to_tuple(self, state):
-        a = tuple(state.items())
-        return a
+        return tuple(state.items())
 
-
-    # updates the input board
     def update_board(self, board, coord, new_coord):
+        """
+        Updates a board state, given a certain action.
+        :param board: the current board state
+        :param coord: the initial coordinate of the piece taking action
+        :param new_coord: the final coordinate of the piece taking action
+        :return: the updated board state
+        """
         # remove the old coordinate's player
         color = board[coord]
-        if self.distance(coord, new_coord) == 2:
-            self.jump_update(board, self.isJumped(coord, new_coord), color)
+        # change colour of a piece that gets jumped over
+        if self.distance(coord, new_coord) == JUMP_DISTANCE:
+            self.jump_update(board, self.jumped_piece(coord, new_coord), color)
         del board[coord]
         # place the player on the new coordinate
         if new_coord != EXIT_LOC:
             board[new_coord] = color
         return board
 
-
-    #  formats output describing the move
     def format_move(self, old_coord, new_coord=None):
+        """
+        Formats an action according to referee specifications
+        :param old_coord: initial location of the piece taking action
+        :param new_coord: final location of the piece taking action
+        :return: a tuple containing the action's type and old and new locations
+        """
         action = self.action_type(old_coord, new_coord)
         # if the action is an exit, remove piece from board
         if old_coord is None:
@@ -361,9 +343,13 @@ class ExamplePlayer:
         else:
             return (action, (tuple(old_coord), tuple(new_coord)))
 
-
-    # generates a list of states showing the next possible actions
     def generate_next_states(self, state, colour):
+        """
+        Generates all the possible states after a player makes an action.
+        :param state: the game state before the player takes action
+        :param colour: the colour of the player
+        :return: a list of all state values that would result from the player's next action
+        """
         next_state = []
         for piece in state:
             if state[piece] == colour:
@@ -377,14 +363,19 @@ class ExamplePlayer:
                         tmp_board = state.copy()
                         tmp_board = self.update_board(tmp_board, piece, move)
                         next_state.append(tmp_board)
+        # if the player must pass, the board state will remain the same
         if len(next_state) == 0:
             next_state.append(state)
             return next_state
         return next_state
 
-
-    # finds the difference between two states
     def state_diff(self, state1, state2):
+        """
+        Finds the old and new coordinates of a piece that has moved
+        :param state1: the board state before a move
+        :param state2: the board state after a move
+        :return: the filled spaces that have changed between the states
+        """
         diff = [None, None]
         for piece in state1:
             if piece not in state2:
@@ -398,107 +389,85 @@ class ExamplePlayer:
                         diff[1] = new_piece
         return diff
 
-
-    # reconstructs the path to the current node. based off webinar code provided by Matt Farrugia (2019)
-    def construct_path(self, came_from, goal):
-        path = []
-        state = goal
-        # trace steps backwards from goal
-        while came_from[state] is not None:
-            path.append(state)
-            state = came_from[state]
-        path.append(state)
-        path.reverse()
-        # print the moves made
-        action = self.state_diff(path[0], path[path.index(state) + 1])
-        return self.format_move(action[0], action[1])
-        # for state in path[:-1]:
-        #     action = self.state_diff(state, path[path.index(state) + 1])
-        #     self.print_move(action[0], action[1])
-
-
-    # removes a certain piece from the board
     def make_exit(self, coord, state):
+        """
+        Removes a certain piece from the board
+        :param coord: the location where the piece exits from
+        :param state: the board state before the exit is made
+        :return: the new state
+        """
         del state[coord]
         return state
 
-
-    ## aim for corners
-    def aimCorners(self, board, colour):
-        ## only implemented when flag indicates to use this
-        if colour == "red":
-            self.exits = RED_CORNERS
-        elif colour == "green":
-            self.exits = GREEN_CORNERS
-        else:
-            self.exits = BLUE_CORNERS
-
-
-    def startinPieces(self, colour):
-        if colour == "red":
-            pieces = RED_STARTS
-        elif colour == "green":
-            pieces = GREEN_STARTS
-        else:
-            pieces = BLUE_STARTS
-        return pieces
-
-
-    ## update pieces
-    def updatePieces(self, board):
-        pieces = []
-        for piece in board.keys():
-            if board[piece] == self.colour:
-                pieces.append(piece)
-        return pieces
-
-
-    def isJumped(self, oldcoord, newcoord):
-        # newcoord x,y
+    def jumped_piece(self, oldcoord, newcoord):
+        """
+        Finds the piece that is jumped over
+        :param oldcoord: the initial location of a piece that jumps
+        :param newcoord: the location the jumping piece jumps to
+        :return: the coordinates of the space that was jumped over
+        """
         x1 = newcoord[0]
         y1 = newcoord[1]
-
-        # oldcoord x,y
         x2 = oldcoord[0]
         y2 = oldcoord[1]
 
-        # diff x,y
+        # the difference in x and y values
         diffX = x1 - x2
         diffY = y1 - y2
 
-        if abs(diffX) == 2 and diffY == 0:
+        # for a horizontal jump
+        if abs(diffX) == JUMP_DISTANCE and diffY == 0:
             return (x1 - int(1 * np.sign(diffX)), y1)
-        elif abs(diffX) == 2 and abs(diffY) == 2:
+        # for a diagonal jump
+        elif abs(diffX) == JUMP_DISTANCE and abs(diffY) == JUMP_DISTANCE:
             return (x1 - int(1 * np.sign(diffX)), y1 - int(1 * np.sign(diffY)))
-        elif diffX == 0 and abs(diffY) == 2:
+        elif diffX == 0 and abs(diffY) == JUMP_DISTANCE:
             return (x1, y1 - int(1 * np.sign(diffY)))
 
 
     def find_numpieces(self, colour, state):
+        """
+        Finds the number of pieces a player has on the board
+        :param colour: the player's colour
+        :param state: the current board state
+        :return: the number of pieces of the player's colour on the board
+        """
         numpieces = 0
         for piece in self.dict_to_tuple(state):
             if piece[1] == colour:
                 numpieces += 1
         return numpieces
 
-
-    # update the board with a jump
     def jump_update(self, board, coord, colour):
-        # del board[coord]
+        """
+        Updates the colour of a piece being jumped
+        :param board: the initial board state
+        :param coord: the coordinate of the piece being jumped
+        :param colour: the new colour of the converted piece
+        :return: the new board state
+        """
         board[coord] = colour
         return board
- 
-    # returns the colour of the next player
+
     def next_player(self, colour):
+        """
+        Finds the colour of the next player to make an action
+        :param colour: the colour of the current player
+        :return: the next player's colour
+        """
         next_player_index = (PLAYER_LIST.index(colour) + 1) % len(PLAYER_LIST)
         return PLAYER_LIST[next_player_index]
 
-
-    def generate_surroundings(self, coord, colour):
+    def generate_surroundings(self, coord):
+        """
+        Finds the spaces surrounding a given space
+        :param coord: the coordinates of the space
+        :return: a list of the spaces immediately adjacent to the space
+        """
         x = coord[0]
         y = coord[1]
         move_list = []
-        # show ALL moves
+        # show all directions
         move_list.append((x + 1, y))
         move_list.append((x + 1, y - 1))
         move_list.append((x, y + 1))
@@ -507,17 +476,113 @@ class ExamplePlayer:
         move_list.append((x, y - 1))
         return move_list
 
-
-    def canBeCaptured(self, state, colour):
-        evaluationNum = 0
+    def find_captors(self, state, colour):
+        """
+        Estimates the number of enemies can capture a piece in a given state.
+        :param state: the current board state
+        :param colour: the colour of the pieces that may be captured
+        :return: the number of enemy pieces adjacent to player pieces
+        """
+        evaluation_num = 0
         for space in list(state.keys()):
-            ## check surroundings
+            # check surroundings
             if state[space] == colour:
-                surroundings = self.generate_surroundings(space, colour)
-                for possibleEnemy in surroundings:
-                    if possibleEnemy in list(state.keys()) and state[possibleEnemy] != colour:
-                        evaluationNum += 1
+                surroundings = self.generate_surroundings(space)
+                for possible_enemy in surroundings:
+                    if possible_enemy in list(state.keys()) and state[possible_enemy] != colour:
+                        evaluation_num += 1
                     else:
                         continue
 
-        return evaluationNum
+        return evaluation_num
+
+    def should_cutoff(self, depth, exits):
+        """
+        Determines if the maxn search should be cut off
+        :param depth: the current depth of the tree
+        :param exits: the list of exits that have been made
+        :return: boolean value True if the game has been won, False otherwise
+        """
+        if depth >= CUTOFF_DEPTH:
+            return True
+        for player in exits:
+            if player >= 4:
+                return True
+        return False
+
+    def piece_eval(self, player, state, exits):
+        """
+        Function for evaluating the number of a player's pieces
+        :param player: the colour of the player
+        :param state: the projected board state
+        :param exits: the projected list of exits made
+        :return: scaled value of the number of pieces
+        """
+        numpieces = self.find_numpieces(player, state)
+        if numpieces != 0:
+            ratio = (WINNING_EXITS - exits[PLAYER_LIST.index(player)]) / self.find_numpieces(player, state)
+        else:
+            ratio = (WINNING_EXITS - exits[PLAYER_LIST.index(player)])
+        if (1 - abs(1 - ratio)) <= 0:
+            return 0
+        return (1 - abs(1 - ratio)) * PIECE_SCALE
+
+    def evaluation(self, state, exits):
+        """
+        Evaluates the board state
+        :param state: the board state
+        :param exits: the number of exits made at the time of the board state
+        :return: a list of the state evaluation for each player
+        """
+        evals = []
+        # criteria in order: distance, exit and number of pieces
+        weights = [4, 3, 2]
+        captured_weight = 1
+        for player in PLAYER_LIST:
+            # adjust weighting according to the number of pieces left
+            if self.find_numpieces(player, state) + exits[PLAYER_LIST.index(player)] < 4:
+                captured_weight = 3
+                weights = [2, 3, 5]
+            elif self.find_numpieces(player, state) + exits[PLAYER_LIST.index(player)] > 5:
+                weights = [2, 2, 4]
+            # evaluate criteria
+            distance_eval = (MAX_DISTANCE - self.exit_distances(state, player)) * DIST_SCALE
+            exits_eval = exits[PLAYER_LIST.index(player)] * EXIT_SCALE
+            piece_eval = self.piece_eval(player, state, exits)
+            captured = self.find_captors(state, player)
+            # add up the criteria values, adjusted for weight
+            player_val = weights[0] * distance_eval + weights[1] * exits_eval + weights[
+                2] * piece_eval + captured_weight * captured
+            evals.append(player_val)
+        return evals
+
+    def maxn(self, state, player, depth, exits):
+        """
+        Runs the maxn algorithm, derived from pseudocode provided to students of COMP30024 by Matt Farrugia
+        :param state: the state to be evaluated
+        :param player: the player aiming to maximise its states
+        :param depth: the current depth being looked at
+        :param exits: the number of exits made at this state
+        :return: a tuple containing the evaluation, as well as the best action to take
+        """
+        tmp_exits = exits.copy()
+        player_index = PLAYER_LIST.index(player)
+        # check if this is a cutoff state
+        if self.should_cutoff(depth, tmp_exits):
+            return (self.evaluation(state, tmp_exits), None)
+        v_max = [-math.inf, -math.inf, -math.inf]
+        best_action = None
+        # generate the next states
+        for next_state in self.generate_next_states(state, player):
+            # keep track of any exits made in projected state
+            action_coords = self.state_diff(state, next_state)
+            if action_coords[0] is not None and action_coords[1] is None:
+                tmp_exits[player_index] += 1
+            # evaluate projected state
+            next_v = self.maxn(next_state, self.next_player(player), depth + 1, tmp_exits)[0]
+            # if this is the best outcome so far
+            if next_v[player_index] > v_max[player_index]:
+                v_max = next_v
+                best_action = self.format_move(action_coords[0], action_coords[1])
+            tmp_exits = exits.copy()
+        return (v_max, best_action)
