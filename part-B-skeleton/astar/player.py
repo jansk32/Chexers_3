@@ -37,9 +37,6 @@ BLUE_STARTS = [(0, 3), (1, 2), (2, 1), (3, 0)]
 # temporary holding place for exiting pieces
 EXIT_LOC = (3, 1)
 
-CUTOFF_DEPTH = 3
-PLAYER_LIST = ['red', 'green', 'blue']
-
 class ExamplePlayer:
     def __init__(self, colour):
         """
@@ -174,18 +171,6 @@ class ExamplePlayer:
             return False
         return True
 
-    def can_exit(self, state, piece):
-        if state[piece] == 'red':
-            if piece in RED_EXITS:
-                return True
-        elif state[piece] == 'green':
-            if piece in GREEN_EXITS:
-                return True
-        elif state[piece] == 'blue':
-            if piece in BLUE_EXITS:
-                return True
-        return False
-
     # returns list of all possible hexes a piece can move or jump to, given the piece's location
     def can_move(self, coord):
         [x, y] = coord
@@ -249,7 +234,7 @@ class ExamplePlayer:
         return board
 
     #  prints output describing the move
-    def format_move(self, old_coord, new_coord=None):
+    def print_move(self, old_coord, new_coord=None):
         action = self.action_type(old_coord, new_coord)
         # if the action is an exit, remove piece from board
         if new_coord is None:
@@ -263,15 +248,10 @@ class ExamplePlayer:
             #print("{} from {} to {}.".format(action, tuple(old_coord), tuple(new_coord)))
 
     # generates a list of states showing the next possible actions
-    def generate_next_states(self, state, colour):
+    def generate_next_states(self, state):
         next_state = []
         for piece in state:
-            if state[piece] == colour:
-                if self.can_exit(state, piece):
-                    tmp_board = state.copy()
-                    tmp_board = self.make_exit(piece, tmp_board)
-                    tmp_board = self.dict_to_tuple(tmp_board)
-                    next_state.append(tmp_board)
+            if state[piece] == self.colour:
                 # if the piece can move or jump, generate a new state for its possible actions
                 for move in self.can_move(piece):
                     if move:
@@ -328,7 +308,7 @@ class ExamplePlayer:
         path.reverse()
         # print the moves made
         action = self.state_diff(path[0], path[path.index(state) + 1])
-        return self.format_move(action[0], action[1])
+        return self.print_move(action[0], action[1])
         # for state in path[:-1]:
         #     action = self.state_diff(state, path[path.index(state) + 1])
         #     self.print_move(action[0], action[1])
@@ -473,42 +453,6 @@ class ExamplePlayer:
         board[coord] = colour
         return board
 
-    # returns the colour of the next player
-    def next_player(self, colour):
-        next_player_index = (PLAYER_LIST.index(colour)+1)%len(PLAYER_LIST)
-        return PLAYER_LIST[next_player_index]
-
-    # determines if maxn should be cut off
-    def should_cutoff(self, depth):
-        if depth >= CUTOFF_DEPTH:
-            return True
-        # need to check for terminal state
-        return False
-
-    def evaluation(self, state):
+    def evaluation(self, board):
         eval = []
-        for player in PLAYER_LIST:
-            player_val = -math.inf
-            # do calculations, will probably have to count number of exits for each player
-            eval.append(player_val)
         return eval
-
-    def maxn(self, state, player, depth):
-        player_index = PLAYER_LIST.index(player)
-        if self.should_cutoff(depth):
-            return (self.evaluation(state), None)
-        v_max = [-math.inf, -math.inf, -math.inf]
-        best_action = None
-        # doesn't currently deal with passes
-        for next_state in self.generate_next_states(state, player):
-            next_v = self.maxn(next_state, self.next_player(player), depth+1)[0]
-            if next_v[player_index] > v_max[player_index]:
-                action_coords = self.state_diff(state, next_state)
-                v_max = next_v
-                best_action = self.format_move(action_coords[0], action_coords[1])
-        return (v_max, best_action)
-
-
-
-
-
